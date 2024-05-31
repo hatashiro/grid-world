@@ -14,7 +14,7 @@ const METHODS = {
 };
 
 function createOptions() {
-  return {
+  const opts = {
     positiveGoalValue: Number($controlForm.positiveGoalValue.value),
     negativeGoalValue: Number($controlForm.negativeGoalValue.value),
     discountFactor: Number($controlForm.discountFactor.value),
@@ -25,6 +25,13 @@ function createOptions() {
     numEpisodes: Number($controlForm.numEpisodes.value),
     method: $controlForm.method.value,
   };
+
+  if (opts.movementCost < 0) {
+    alert('Invalid movement cost, will use 0.');
+    opts.movementCost = 0;
+  }
+
+  return opts;
 }
 
 const actions = ['up', 'right', 'down', 'left'];
@@ -211,7 +218,8 @@ function valueIteration(Q, opts) {
             }
           }
 
-          const newVal = opts.movementCost + opts.discountFactor * expectedNextQ;
+          const R = -opts.movementCost;
+          const newVal = R + opts.discountFactor * expectedNextQ;
           console.log(row, col, newVal);
 
           if (Math.abs(curVal - newVal) > 1e-8) {

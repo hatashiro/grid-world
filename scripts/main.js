@@ -186,7 +186,30 @@ function valueIteration(Q, opts) {
         for (let a = 0; a < actions.length; a++) {
           const curVal = Q[row][col][a];
 
-          let expectedNextQ = nextQ(Q, row, col, a);
+          const p = opts.movementNoiseProbability;
+          let probs;
+          switch (a) {
+            case 0:
+              probs = [1 - 2 * p, p, 0, p]
+              break;
+            case 1:
+              probs = [p, 1 - 2 * p, p, 0]
+              break;
+            case 2:
+              probs = [0, p, 1 - 2 * p, p]
+              break;
+            case 3:
+              probs = [p, 0, p, 1 - 2 * p]
+              break;
+          }
+
+          let expectedNextQ = 0;
+          for (let a_ = 0; a_ < probs.length; a_++) {
+            const p_ = probs[a_];
+            if (p_ > 0) {
+              expectedNextQ += p_ * nextQ(Q, row, col, a_);
+            }
+          }
 
           const newVal = opts.movementCost + opts.discountFactor * expectedNextQ;
           console.log(row, col, newVal);

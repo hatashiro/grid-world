@@ -34,7 +34,8 @@
 .action .score {
   position: absolute;
   top: 0px;
-  left: 0px;
+  left: 50%;
+  translate: -50% 0;
 }
 
 .action.up {

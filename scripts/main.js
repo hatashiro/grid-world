@@ -22,6 +22,7 @@ function createOptions() {
     movementNoiseProbability: Number($controlForm.movementNoiseProbability.value),
     learningRate: Number($controlForm.learningRate.value),
     explorationRate: Number($controlForm.explorationRate.value),
+    numEpisodes: Number($controlForm.numEpisodes.value),
     method: $controlForm.method.value,
   };
 }

@@ -47,6 +47,10 @@
                 <input type="number" class="form-control" id="discountFactor" name="discountFactor" value="1.0">
               </div>
               <div class="mb-3">
+                <label for="numEpisodes" class="form-label">Number of episodes (Q-Learning)</label>
+                <input type="number" class="form-control" id="numEpisodes" name="numEpisodes" value="10000">
+              </div>
+              <div class="mb-3">
                 <label class="form-label">Method</label>
                 <div class="form-check">
                   <input class="form-check-input" type="radio" name="method" id="methodValueIteration" value="ValueIteration" checked>
@@ -61,7 +65,7 @@
                   </label>
                 </div>
               </div>
-              <div class="mb-3" style="padding-top: 19px;">
+              <div class="mb-3">
                 <button type="submit" class="btn btn-primary">Run</button>
               </div>
             </div>

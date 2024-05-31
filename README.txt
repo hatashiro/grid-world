@@ -7,8 +7,8 @@ https://hatashiro.github.io/grid-world/
 Requirement
 -----------
 
-The app is built with (relatively) recent Web features such as JavaScript
-modules and Web Components. Use the latest Chrome to run it.
+The app is built with the latest desktop Chrome. It's not tested in other
+browsers.
 
 
 License

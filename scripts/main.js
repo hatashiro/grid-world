@@ -1,4 +1,5 @@
 const $controlForm = document.querySelector('#controlForm');
+const $world = document.querySelector('#world');
 
 $controlForm.addEventListener('submit', (evt) => {
   updateWorld(createOptions());
@@ -25,7 +26,91 @@ function createOptions() {
   };
 }
 
+const actions = ['up', 'right', 'down', 'left'];
+
+function createCell() {
+  const $cell = document.createElement('div');
+  $cell.classList.add('cell');
+
+  const actionLabels = {up: '↑', right: '→', down: '↓', left: '←'};
+
+  actions.forEach((action) => {
+    const $action = document.createElement('div');
+    $action.classList.add('action');
+    $action.classList.add(action);
+
+    const $label = document.createElement('div');
+    $label.classList.add('label');
+    $label.textContent = actionLabels[action];
+    $action.appendChild($label);
+
+    const $score = document.createElement('div');
+    $score.classList.add('score');
+    $score.textContent = '0.0';
+    $action.appendChild($score);
+
+    $cell.appendChild($action);
+  });
+
+  const $value = document.createElement('div');
+  $value.classList.add('value');
+  $value.textContent = '0.0';
+  $cell.appendChild($value);
+
+  return $cell;
+}
+
+function setValue($cell, value) {
+  $cell.querySelector('.value').textContent = value;
+}
+
+function setScores($cell, scores) {
+  const max = Math.max(...scores);
+  for (let i = 0; i < actions.length; i++) {
+    const action = actions[i];
+    const score = scores[i];
+
+    const $score = $cell.querySelector(`.action.${action} .score`);
+    $score.textContent = score;
+
+    const scale = 2 * score / max;
+    const $label = $cell.querySelector(`.action.${action} .label`);
+    $label.style.transform = `scale(${scale})`;
+  }
+}
+
 function updateWorld(opts) {
+  // Empty the world.
+  $world.innerHTML = '';
+
+  const numRows = 3;
+  const numCols = 4;
+
+  const cells = []
+  for (let row = 0; row < numRows; row++) {
+    cells.push([])
+    for (let col = 0; col < numCols; col++) {
+      const $cell = createCell();
+      $world.appendChild($cell);
+      cells[row].push($cell);
+    }
+  }
+
+  // Wall
+  cells[1][1].classList.add('wall');
+
+  // Start
+  cells[2][0].classList.add('start');
+  setValue(cells[2][0], 'Start');
+
+  // Goals
+  cells[0][3].classList.add('goal');
+  cells[0][3].classList.add('positive');
+  setValue(cells[0][3], opts.positiveGoalValue);
+  cells[1][3].classList.add('goal');
+  cells[1][3].classList.add('negative');
+  setValue(cells[1][3], opts.negativeGoalValue);
+
   // TODO
-  console.log(opts)
+  setScores(cells[1][0], [2, 3, 1, 1])
 }

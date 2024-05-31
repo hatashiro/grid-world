@@ -66,6 +66,8 @@ function setValue($cell, value) {
 
 function setScores($cell, scores) {
   const max = Math.max(...scores);
+  const min = Math.min(...scores);
+
   for (let i = 0; i < actions.length; i++) {
     const action = actions[i];
     const score = scores[i];
@@ -73,9 +75,11 @@ function setScores($cell, scores) {
     const $score = $cell.querySelector(`.action.${action} .score`);
     $score.textContent = score;
 
-    const scale = 2 * score / max;
-    const $label = $cell.querySelector(`.action.${action} .label`);
-    $label.style.transform = `scale(${scale})`;
+    const scale = 1 + (score - min) / (max - min);
+    if (scale) {
+      const $label = $cell.querySelector(`.action.${action} .label`);
+      $label.style.transform = `scale(${scale})`;
+    }
   }
 }
 
@@ -86,31 +90,55 @@ function updateWorld(opts) {
   const numRows = 3;
   const numCols = 4;
 
-  const cells = []
+  const $cells = []
+  const Q = []
   for (let row = 0; row < numRows; row++) {
-    cells.push([])
+    $cells.push([]);
+    Q.push([]);
+
     for (let col = 0; col < numCols; col++) {
       const $cell = createCell();
       $world.appendChild($cell);
-      cells[row].push($cell);
+      $cells[row].push($cell);
+      Q[row].push([0, 0, 0, 0]);
     }
   }
 
   // Wall
-  cells[1][1].classList.add('wall');
+  $cells[1][1].classList.add('wall');
 
   // Start
-  cells[2][0].classList.add('start');
-  setValue(cells[2][0], 'Start');
+  $cells[2][0].classList.add('start');
+  setValue($cells[2][0], 'Start');
 
   // Goals
-  cells[0][3].classList.add('goal');
-  cells[0][3].classList.add('positive');
-  setValue(cells[0][3], opts.positiveGoalValue);
-  cells[1][3].classList.add('goal');
-  cells[1][3].classList.add('negative');
-  setValue(cells[1][3], opts.negativeGoalValue);
+  $cells[0][3].classList.add('goal');
+  $cells[0][3].classList.add('positive');
+  setValue($cells[0][3], opts.positiveGoalValue);
+  $cells[1][3].classList.add('goal');
+  $cells[1][3].classList.add('negative');
+  setValue($cells[1][3], opts.negativeGoalValue);
 
+  switch (opts.method) {
+    case METHODS.VALUE_ITERATION:
+      valueIteration(Q, numRows, numCols, opts);
+      break;
+    case METHODS.Q_LEARNING:
+      qLearning(Q, numRows, numCols, opts);
+      break;
+  }
+
+  for (let row = 0; row < numRows; row++) {
+    for (let col = 0; col < numCols; col++) {
+      setScores($cells[row][col], Q[row][col]);
+    }
+  }
+}
+
+function valueIteration(Q, numRows, numCols, opts) {
   // TODO
-  setScores(cells[1][0], [2, 3, 1, 1])
+}
+
+function qLearning(Q, numRows, numCols, opts) {
+  // TODO
 }

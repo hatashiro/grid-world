@@ -135,7 +135,7 @@ function updateWorld(opts) {
       valueIteration(Q, opts);
       break;
     case METHODS.Q_LEARNING:
-      qLearning(Q, opts);
+      qLearning(Q, opts, 2, 0);
       break;
   }
 
@@ -148,7 +148,7 @@ function updateWorld(opts) {
   }
 }
 
-function nextQ(Q, row, col, a) {
+function nextPos(Q, row, col, a) {
   let nextRow = row;
   let nextCol = col;
 
@@ -173,6 +173,11 @@ function nextQ(Q, row, col, a) {
     nextRow = row;
     nextCol = col;
   }
+  return [nextRow, nextCol];
+}
+
+function nextQ(Q, row, col, a) {
+  const [nextRow, nextCol] = nextPos(Q, row, col, a);
 
   if (Q[nextRow][nextCol] instanceof Array) {
     return Math.max(...Q[nextRow][nextCol]);
@@ -220,7 +225,6 @@ function valueIteration(Q, opts) {
 
           const R = -opts.movementCost;
           const newVal = R + opts.discountFactor * expectedNextQ;
-          console.log(row, col, newVal);
 
           if (Math.abs(curVal - newVal) > 1e-8) {
             changed = true;
@@ -232,6 +236,77 @@ function valueIteration(Q, opts) {
   }
 }
 
-function qLearning(Q, opts) {
-  // TODO
+function choose(ps) {
+  if (!(ps instanceof Array)) {
+    ps = [ps, 1 - ps];
+  }
+
+  let r = Math.random();
+  for (let i = 0; i < ps.length; i++) {
+    r -= ps[i];
+    if (r < 0) return i;
+  }
+  return ps.length - 1;
+}
+
+function argmax(arr) {
+  let maxVal = -Infinity;
+  let maxIdx = -1;
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i] > maxVal) {
+      maxVal = arr[i];
+      maxIdx = i;
+    }
+  }
+  return maxIdx;
+}
+
+function qLearning(Q, opts, startRow, startCol) {
+  for (let i = 0; i < opts.numEpisodes; i++) {
+    let row = startRow;
+    let col = startCol;
+    while (true) {
+      if (!(Q[row][col] instanceof Array)) {
+        // Goal.
+        break;
+      }
+
+      let a;
+      if (choose(opts.explorationRate)) {
+        a = choose([1/4, 1/4, 1/4, 1/4]);
+      } else {
+        a = argmax(Q[row][col])
+      }
+
+      const p = opts.movementNoiseProbability;
+      let probs;
+      switch (a) {
+        case 0:
+          probs = [1 - 2 * p, p, 0, p]
+          break;
+        case 1:
+          probs = [p, 1 - 2 * p, p, 0]
+          break;
+        case 2:
+          probs = [0, p, 1 - 2 * p, p]
+          break;
+        case 3:
+          probs = [p, 0, p, 1 - 2 * p]
+          break;
+      }
+
+      const a_ = choose(probs);
+      const [nextRow, nextCol] = nextPos(Q, row, col, a_);
+      const Q_ = nextQ(Q, row, col, a_);
+
+      r = -opts.movementCost;
+
+      const alpha = opts.learningRate;
+      const gamma = opts.discountFactor;
+      Q[row][col][a] = (1 - alpha) * Q[row][col][a] + alpha * (r + gamma * Q_)
+
+      row = nextRow;
+      col = nextCol;
+    }
+  }
 }

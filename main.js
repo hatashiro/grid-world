@@ -1,5 +1,10 @@
-const $controlForm = document.querySelector('#controlForm');
-const $world = document.querySelector('#world');
+import {$} from 'https://cdn.jsdelivr.net/gh/hatashiro/web@0469a8/utility/dom.js';
+import * as math from 'https://cdn.jsdelivr.net/gh/hatashiro/web@0469a8/utility/math.js';
+import * as ndarray from 'https://cdn.jsdelivr.net/gh/hatashiro/web@0469a8/utility/ndarray.js';
+import * as random from 'https://cdn.jsdelivr.net/gh/hatashiro/web@0469a8/utility/random.js';
+
+const $controlForm = $('#controlForm');
+const $world = $('#world');
 
 $controlForm.addEventListener('submit', (evt) => {
   // No page reload.
@@ -7,11 +12,6 @@ $controlForm.addEventListener('submit', (evt) => {
 
   updateWorld(createOptions());
 });
-
-const METHODS = {
-  VALUE_ITERATION: 'ValueIteration',
-  Q_LEARNING: 'QLearning',
-};
 
 function createOptions() {
   const opts = {
@@ -34,155 +34,97 @@ function createOptions() {
   return opts;
 }
 
-const actions = ['up', 'right', 'down', 'left'];
+// World definitions.
+const WORLD_SHAPE = [3, 4];
 
-function createCell() {
-  const $cell = document.createElement('div');
-  $cell.classList.add('cell');
+const START_IDX = [2, 0];
+const WALL_IDX = [1, 1];
+const POSITIVE_IDX = [0, 3];
+const NEGATIVE_IDX = [1, 3];
 
-  const actionLabels = {up: '↑', right: '→', down: '↓', left: '←'};
-
-  actions.forEach((action) => {
-    const $action = document.createElement('div');
-    $action.classList.add('action');
-    $action.classList.add(action);
-
-    const $label = document.createElement('div');
-    $label.classList.add('label');
-    $label.textContent = actionLabels[action];
-    $action.appendChild($label);
-
-    const $score = document.createElement('div');
-    $score.classList.add('score');
-    $score.textContent = '0.0';
-    $action.appendChild($score);
-
-    $cell.appendChild($action);
-  });
-
-  const $value = document.createElement('div');
-  $value.classList.add('value');
-  $value.textContent = '0.0';
-  $cell.appendChild($value);
-
-  return $cell;
+function isVisitableIdx(idx) {
+  return (0 <= idx[0] && idx[0] < WORLD_SHAPE[0] &&
+          0 <= idx[1] && idx[1] < WORLD_SHAPE[1] &&
+          // Wall is not visitable.
+          !ndarray.equals(idx, WALL_IDX));
 }
 
-function setValue($cell, value) {
-  $cell.querySelector('.value').textContent = value;
+function isGoalIdx(idx) {
+  return (ndarray.equals(idx, POSITIVE_IDX) ||
+          ndarray.equals(idx, NEGATIVE_IDX));
 }
 
-function setScores($cell, scores) {
-  const max = Math.max(...scores);
-  const min = Math.min(...scores);
+function isStateIdx(idx) {
+  // Goals are not states.
+  return isVisitableIdx(idx) && !isGoalIdx(idx);
+}
 
-  for (let i = 0; i < actions.length; i++) {
-    const action = actions[i];
-    const score = scores[i];
+// Action definitions.
 
-    const $score = $cell.querySelector(`.action.${action} .score`);
-    $score.textContent = Number(score).toFixed(2);
+const ACTIONS = ['up', 'right', 'down', 'left'];
 
-    const scale = 1 + (score - min) / (max - min);
-    if (scale) {
-      const $label = $cell.querySelector(`.action.${action} .label`);
-      $label.style.transform = `scale(${scale})`;
-    }
+function nextIdx(idx, a) {
+  const idx_ = ndarray.copy(idx);
+  switch (a) {
+    case 0:  // Up
+      idx_[0] -= 1;
+      break
+    case 1:  // Right
+      idx_[1] += 1;
+      break
+    case 2:  // Down
+      idx_[0] += 1;
+      break
+    case 3:  // Left
+      idx_[1] -= 1;
+      break
+  }
+  return isVisitableIdx(idx_) ? idx_ : idx;
+}
+
+function actionProbs(a, p) {
+  switch (a) {
+    case 0:  // Up
+      return [1 - 2 * p, p, 0, p];
+    case 1:  // Right
+      return [p, 1 - 2 * p, p, 0];
+    case 2:  // Down
+      return [0, p, 1 - 2 * p, p];
+    case 3:  // Left
+      return [p, 0, p, 1 - 2 * p];
   }
 }
 
-const numRows = 3;
-const numCols = 4;
+// Main logic.
+
+function initQ(opts) {
+  const shape = WORLD_SHAPE.concat([ACTIONS.length]);
+  const Q = ndarray.init(shape, 0);
+
+  ndarray.set(Q, POSITIVE_IDX, opts.positiveGoalValue);
+  ndarray.set(Q, NEGATIVE_IDX, opts.negativeGoalValue);
+
+  return Q;
+}
+
+const METHODS = {
+  ValueIteration: valueIteration,
+  QLearning: qLearning,
+};
 
 function updateWorld(opts) {
   // Empty the world.
   $world.innerHTML = '';
 
-  const $cells = []
-  const Q = []
-  for (let row = 0; row < numRows; row++) {
-    $cells.push([]);
-    Q.push([]);
+  const Q = initQ(opts);
+  METHODS[opts.method](Q, opts);
 
-    for (let col = 0; col < numCols; col++) {
-      const $cell = createCell();
-      $world.appendChild($cell);
-      $cells[row].push($cell);
-      Q[row].push([0, 0, 0, 0]);
+  // Create and append cells.
+  for (let row = 0; row < WORLD_SHAPE[0]; row++) {
+    for (let col = 0; col < WORLD_SHAPE[1]; col++) {
+      const idx = [row, col];
+      $world.appendChild(createCell(ndarray.get(Q, idx), idx));
     }
-  }
-
-  // Wall
-  $cells[1][1].classList.add('wall');
-  Q[1][1] = null;
-
-  // Start
-  $cells[2][0].classList.add('start');
-  setValue($cells[2][0], 'Start');
-
-  // Goals
-  $cells[0][3].classList.add('goal');
-  $cells[0][3].classList.add('positive');
-  Q[0][3] = opts.positiveGoalValue;
-  setValue($cells[0][3], opts.positiveGoalValue);
-  $cells[1][3].classList.add('goal');
-  $cells[1][3].classList.add('negative');
-  setValue($cells[1][3], opts.negativeGoalValue);
-  Q[1][3] = opts.negativeGoalValue;
-
-  switch (opts.method) {
-    case METHODS.VALUE_ITERATION:
-      valueIteration(Q, opts);
-      break;
-    case METHODS.Q_LEARNING:
-      qLearning(Q, opts, 2, 0);
-      break;
-  }
-
-  for (let row = 0; row < numRows; row++) {
-    for (let col = 0; col < numCols; col++) {
-      if (Q[row][col] instanceof Array) {
-        setScores($cells[row][col], Q[row][col]);
-      }
-    }
-  }
-}
-
-function nextPos(Q, row, col, a) {
-  let nextRow = row;
-  let nextCol = col;
-
-  switch (a) {
-    case 0:  // Up
-      nextRow -= 1;
-      break
-    case 1:  // Right
-      nextCol += 1;
-      break
-    case 2:  // Down
-      nextRow += 1;
-      break
-    case 3:  // Left
-      nextCol -= 1;
-      break
-  }
-
-  if (nextRow < 0 || nextRow >= numRows ||
-      nextCol < 0 || nextCol >= numCols ||
-      Q[nextRow][nextCol] === null /* Wall */) {
-    nextRow = row;
-    nextCol = col;
-  }
-  return [nextRow, nextCol];
-}
-
-function nextQ(Q, row, col, a) {
-  const [nextRow, nextCol] = nextPos(Q, row, col, a);
-
-  if (Q[nextRow][nextCol] instanceof Array) {
-    return Math.max(...Q[nextRow][nextCol]);
-  } else {
-    return Q[nextRow][nextCol];  // Goal state.
   }
 }
 
@@ -190,123 +132,93 @@ function valueIteration(Q, opts) {
   let changed = true;
   while (changed) {
     changed = false;
-    for (let row = 0; row < numRows; row++) {
-      for (let col = 0; col < numCols; col++) {
+    for (let row = 0; row < WORLD_SHAPE[0]; row++) {
+      for (let col = 0; col < WORLD_SHAPE[1]; col++) {
+        const idx = [row, col];
+
         // Skip non-states.
-        if (!(Q[row][col] instanceof Array)) continue;
+        if (!isStateIdx(idx)) continue;
 
-        for (let a = 0; a < actions.length; a++) {
-          const curVal = Q[row][col][a];
-
-          const p = opts.movementNoiseProbability;
-          let probs;
-          switch (a) {
-            case 0:
-              probs = [1 - 2 * p, p, 0, p]
-              break;
-            case 1:
-              probs = [p, 1 - 2 * p, p, 0]
-              break;
-            case 2:
-              probs = [0, p, 1 - 2 * p, p]
-              break;
-            case 3:
-              probs = [p, 0, p, 1 - 2 * p]
-              break;
-          }
-
-          let expectedNextQ = 0;
-          for (let a_ = 0; a_ < probs.length; a_++) {
-            const p_ = probs[a_];
-            if (p_ > 0) {
-              expectedNextQ += p_ * nextQ(Q, row, col, a_);
-            }
-          }
+        const qs = ndarray.get(Q, idx);
+        qs.forEach((q, a) => {
+          const expectedQ_ = math.sum(
+            actionProbs(a, opts.movementNoiseProbability).map((p, a_) =>
+              p * math.max(ndarray.get(Q, nextIdx([row, col], a_))))
+          );
 
           const R = -opts.movementCost;
-          const newVal = R + opts.discountFactor * expectedNextQ;
+          const q_ = R + opts.discountFactor * expectedQ_;
 
-          if (Math.abs(curVal - newVal) > 1e-8) {
+          if (Math.abs(q - q_) > 1e-8) {
             changed = true;
           }
-          Q[row][col][a] = newVal;
-        }
+          qs[a] = q_;
+        });
       }
     }
   }
 }
 
-function choose(ps) {
-  if (!(ps instanceof Array)) {
-    ps = [ps, 1 - ps];
-  }
-
-  let r = Math.random();
-  for (let i = 0; i < ps.length; i++) {
-    r -= ps[i];
-    if (r < 0) return i;
-  }
-  return ps.length - 1;
-}
-
-function argmax(arr) {
-  let maxVal = -Infinity;
-  let maxIdx = -1;
-  for (let i = 0; i < arr.length; i++) {
-    if (arr[i] > maxVal) {
-      maxVal = arr[i];
-      maxIdx = i;
-    }
-  }
-  return maxIdx;
-}
-
-function qLearning(Q, opts, startRow, startCol) {
+function qLearning(Q, opts) {
   for (let i = 0; i < opts.numEpisodes; i++) {
-    let row = startRow;
-    let col = startCol;
+    let idx = ndarray.copy(START_IDX);
     while (true) {
-      if (!(Q[row][col] instanceof Array)) {
-        // Goal.
-        break;
-      }
+      if (isGoalIdx(idx)) break;
+
+      const qs = ndarray.get(Q, idx);
 
       let a;
-      if (choose(opts.explorationRate)) {
-        a = choose([1/4, 1/4, 1/4, 1/4]);
+      if (random.choose(opts.explorationRate)) {
+        a = random.choose([1/4, 1/4, 1/4, 1/4]);
       } else {
-        a = argmax(Q[row][col])
+        a = math.argmax(qs);
       }
 
-      const p = opts.movementNoiseProbability;
-      let probs;
-      switch (a) {
-        case 0:
-          probs = [1 - 2 * p, p, 0, p]
-          break;
-        case 1:
-          probs = [p, 1 - 2 * p, p, 0]
-          break;
-        case 2:
-          probs = [0, p, 1 - 2 * p, p]
-          break;
-        case 3:
-          probs = [p, 0, p, 1 - 2 * p]
-          break;
-      }
+      const a_ = random.choose(actionProbs(a, opts.movementNoiseProbability));
+      const idx_ = nextIdx(idx, a_);
+      const Q_ = math.max(ndarray.get(Q, idx_));
 
-      const a_ = choose(probs);
-      const [nextRow, nextCol] = nextPos(Q, row, col, a_);
-      const Q_ = nextQ(Q, row, col, a_);
-
-      r = -opts.movementCost;
+      const r = -opts.movementCost;
 
       const alpha = opts.learningRate;
       const gamma = opts.discountFactor;
-      Q[row][col][a] = (1 - alpha) * Q[row][col][a] + alpha * (r + gamma * Q_)
 
-      row = nextRow;
-      col = nextCol;
+      qs[a] = (1 - alpha) * qs[a] + alpha * (r + gamma * Q_);
+
+      idx = idx_;
     }
   }
+}
+
+function createCell(Q, idx) {
+  const floatStr = x => String(Number(x).toFixed(2));
+
+  let classList = ['cell'];
+  let text = '';
+  if (ndarray.equals(idx, WALL_IDX)) {
+    classList.push('wall');
+  } else if (ndarray.equals(idx, START_IDX)) {
+    classList.push('start');
+    text = 'Start';
+  } else if (ndarray.equals(idx, POSITIVE_IDX)) {
+    classList.push('goal', 'positive');
+    text = floatStr(Q[0]);
+  } else if (ndarray.equals(idx, NEGATIVE_IDX)) {
+    classList.push('goal', 'negative');
+    text = floatStr(Q[0]);
+  }
+
+  const actionLabels = {up: '↑', right: '→', down: '↓', left: '←'};
+  const scaledQ = math.rescale(Q);
+
+  return $.div({classList}, ACTIONS.map((action, i) =>
+    $.div({classList: ['action', action]}, [
+      $.div({className: 'label',
+             style: {transform: `scale(${(1 + scaledQ[i]) || 1})`}},
+        actionLabels[action]),
+      $.div({className: 'score'}, floatStr(Q[i])),
+    ])
+  ).concat([
+    $.div({className: 'text'}, text),
+  ]));
 }

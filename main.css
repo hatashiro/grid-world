@@ -25,7 +25,7 @@
   border: 1px solid var(--bs-dark);
 }
 
-.action, .value {
+.action, .text {
   position: absolute;
   font-family: monospace;
 }
@@ -82,7 +82,7 @@
   display: none;
 }
 
-.cell .value {
+.cell .text {
   display: none;
   top: 50%;
   left: 50%;
@@ -90,12 +90,12 @@
   font-size: 32px;
 }
 
-.goal .value {
+.goal .text {
   display: block;
   color: var(--bs-white);
 }
 
-.start .value {
+.start .text {
   display: block;
   color: var(--bs-dark);
 }

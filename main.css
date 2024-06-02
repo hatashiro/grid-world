@@ -99,3 +99,8 @@
   display: block;
   color: var(--bs-dark);
 }
+
+#result {
+  margin-top: 12px;
+  font-size: 20px;
+}

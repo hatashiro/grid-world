@@ -5,12 +5,13 @@ import * as random from 'https://cdn.jsdelivr.net/gh/hatashiro/web@0469a8/utilit
 
 const $controlForm = $('#controlForm');
 const $world = $('#world');
+const $result = $('#result');
 
 $controlForm.addEventListener('submit', (evt) => {
   // No page reload.
   evt.preventDefault();
 
-  updateWorld(createOptions());
+  update(createOptions());
 });
 
 function createOptions() {
@@ -112,12 +113,12 @@ const METHODS = {
   QLearning: qLearning,
 };
 
-function updateWorld(opts) {
+function update(opts) {
   // Empty the world.
   $world.innerHTML = '';
 
   const Q = initQ(opts);
-  METHODS[opts.method](Q, opts);
+  const result = METHODS[opts.method](Q, opts);
 
   // Create and append cells.
   for (let row = 0; row < WORLD_SHAPE[0]; row++) {
@@ -126,11 +127,16 @@ function updateWorld(opts) {
       $world.appendChild(createCell(ndarray.get(Q, idx), idx));
     }
   }
+
+  // Render the result if any.
+  $result.textContent = result || 'No result';
 }
 
 function valueIteration(Q, opts) {
+  let numIters = 0;
   let changed = true;
   while (changed) {
+    numIters++;
     changed = false;
     for (let row = 0; row < WORLD_SHAPE[0]; row++) {
       for (let col = 0; col < WORLD_SHAPE[1]; col++) {
@@ -157,15 +163,22 @@ function valueIteration(Q, opts) {
       }
     }
   }
+
+  return `Number of iterations taken to converge: ${numIters}`;
 }
 
 function qLearning(Q, opts) {
+  const Rs = [];
   for (let i = 0; i < opts.numEpisodes; i++) {
+    let R = 0;
     let idx = ndarray.copy(START_IDX);
     while (true) {
-      if (isGoalIdx(idx)) break;
-
       const qs = ndarray.get(Q, idx);
+
+      if (isGoalIdx(idx)) {
+        R += qs[0];  // All are the same at a goal.
+        break;
+      }
 
       let a;
       if (random.choose(opts.explorationRate)) {
@@ -179,6 +192,7 @@ function qLearning(Q, opts) {
       const Q_ = math.max(ndarray.get(Q, idx_));
 
       const r = -opts.movementCost;
+      R += r;
 
       const alpha = opts.learningRate;
       const gamma = opts.discountFactor;
@@ -187,7 +201,10 @@ function qLearning(Q, opts) {
 
       idx = idx_;
     }
+    Rs.push(R);
   }
+
+  return `Mean reward per episode: ${math.mean(Rs)}`;
 }
 
 function createCell(Q, idx) {

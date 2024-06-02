@@ -10,8 +10,11 @@
   display: flex;
   flex-wrap: wrap;
   box-sizing: border-box;
-  border: 1px solid var(--bs-dark);
   margin-top: 20px;
+}
+
+#world:not(:empty) {
+  border: 1px solid var(--bs-dark);
 }
 
 .cell {

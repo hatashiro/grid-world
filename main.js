@@ -211,7 +211,7 @@ function qLearning(Q, opts) {
   return `Mean reward per episode: ${math.mean(Rs)}`;
 }
 
-function createCell(Q, idx) {
+function createCell(qs, idx) {
   const floatStr = x => String(Number(x).toFixed(2));
 
   let classList = ['cell'];
@@ -223,21 +223,21 @@ function createCell(Q, idx) {
     text = 'Start';
   } else if (ndarray.equals(idx, POSITIVE_IDX)) {
     classList.push('goal', 'positive');
-    text = floatStr(Q[0]);
+    text = floatStr(qs[0]);
   } else if (ndarray.equals(idx, NEGATIVE_IDX)) {
     classList.push('goal', 'negative');
-    text = floatStr(Q[0]);
+    text = floatStr(qs[0]);
   }
 
   const actionLabels = {up: '↑', right: '→', down: '↓', left: '←'};
-  const scaledQ = math.rescale(Q);
+  const scaledQ = math.rescale(qs);
 
   return $.div({classList}, ACTIONS.map((action, i) =>
     $.div({classList: ['action', action]}, [
       $.div({className: 'label',
              style: {transform: `scale(${(1 + scaledQ[i]) || 1})`}},
         actionLabels[action]),
-      $.div({className: 'score'}, floatStr(Q[i])),
+      $.div({className: 'score'}, floatStr(qs[i])),
     ])
   ).concat([
     $.div({className: 'text'}, text),

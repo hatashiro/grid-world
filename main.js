@@ -11,7 +11,7 @@ $controlForm.addEventListener('submit', (evt) => {
   // No page reload.
   evt.preventDefault();
 
-  update(createOptions());
+  renderWorld(createOptions());
 });
 
 function createOptions() {
@@ -113,12 +113,16 @@ const METHODS = {
   QLearning: qLearning,
 };
 
-function update(opts) {
+function renderWorld(opts) {
   // Empty the world.
   $world.innerHTML = '';
 
   const Q = initQ(opts);
-  const result = METHODS[opts.method](Q, opts);
+
+  let result = null;
+  if (opts.method) {
+    result = METHODS[opts.method](Q, opts);
+  }
 
   // Create and append cells.
   for (let row = 0; row < WORLD_SHAPE[0]; row++) {
@@ -129,7 +133,7 @@ function update(opts) {
   }
 
   // Render the result if any.
-  $result.textContent = result || 'No result';
+  $result.textContent = result;
 }
 
 function valueIteration(Q, opts) {
@@ -239,3 +243,7 @@ function createCell(Q, idx) {
     $.div({className: 'text'}, text),
   ]));
 }
+
+
+// Initially render the world with no learning.
+renderWorld({...createOptions(), method: null});

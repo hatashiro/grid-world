@@ -1,7 +1,7 @@
-import {$} from 'https://cdn.jsdelivr.net/gh/hatashiro/web@0469a8/utility/dom.js';
-import * as math from 'https://cdn.jsdelivr.net/gh/hatashiro/web@0469a8/utility/math.js';
-import * as ndarray from 'https://cdn.jsdelivr.net/gh/hatashiro/web@0469a8/utility/ndarray.js';
-import * as random from 'https://cdn.jsdelivr.net/gh/hatashiro/web@0469a8/utility/random.js';
+import {$} from 'https://cdn.jsdelivr.net/gh/hatashiro/web/lib/dom.js';
+import * as math from 'https://cdn.jsdelivr.net/gh/hatashiro/web/lib/math.js';
+import * as ndarray from 'https://cdn.jsdelivr.net/gh/hatashiro/web/lib/ndarray.js';
+import * as random from 'https://cdn.jsdelivr.net/gh/hatashiro/web/lib/random.js';
 
 const $controlForm = $('#controlForm');
 const $world = $('#world');
